@@ -19,61 +19,49 @@ To write a PYTHON program for socket for HTTP for web page upload and download
 <BR>
 ## Program 
 
-#### Server.py
+#### http.py
 ```.py
 import socket
-
-HOST = '0.0.0.0'
-PORT = 5500
-
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind((HOST, PORT))
-server.listen(1)
-
-print("Server listening on port 5500...")
-
-while True:
-    conn, addr = server.accept()
-    print("Connected by", addr)
-
-    request = conn.recv(1024)
-
-    with open("example.txt", "rb") as f:
-        body = f.read()
-
-    response = b"HTTP/1.1 200 OK\r\n\r\n" + body
-    conn.sendall(response)
-
-    conn.close()
-```
-
-#### Client.py
-```.py
-import socket
-
-def download_file(host, port, filename):
-    req = f"GET /{filename} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
-    
+def send_request(host, port, request):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
-        s.sendall(req.encode())
-        response = b""
-        while (data := s.recv(4096)):
-            response += data
+        s.sendall(request.encode())
+        response = s.recv(4096).decode()
+    return response
 
-    body = response.split(b"\r\n\r\n", 1)[1]
-    out = f"downloaded_{filename}"
-    with open(out, "wb") as f:
-        f.write(body)
+def upload_file(host, port, filename):
+    with open(filename, 'rb') as file:
+        file_data = file.read()
+        content_length = len(file_data)
+        request = f"POST /upload HTTP/1.1\r\nHost: {host}\r\nContent-Length: {content_length}\r\n\r\n"
+        request += file_data.decode()
+        response = send_request(host, port, request)
+    return response
 
-    print(f"Downloaded as {out}")
+def download_file(host, port, filename):
+    request = f"GET /{filename} HTTP/1.1\r\nHost: {host}\r\n\r\n"
+    response = send_request(host, port, request)
+    # Assuming the response contains the file content after the headers
+    file_content = response.split('\r\n\r\n', 1)[1]
+    with open(filename, 'wb') as file:
+        file.write(file_content.encode())
 
 if __name__ == "__main__":
-    download_file("192.168.56.1", 5500, "example.txt")
+    host = 'example.com'
+    port = 80
+
+    # Upload file
+    upload_response = upload_file(host, port, 'example.txt')
+    print("Upload response:", upload_response)
+
+    # Download file
+    download_file(host, port, 'example.txt')
+    print("File downloaded successfully.")
 ```
+
 ## OUTPUT
 
-<img width="1907" height="1198" alt="exp-5  socket" src="https://github.com/user-attachments/assets/ea1cac84-8a9f-40f0-95a7-f63bdae50c5b" />
+<img width="1918" height="1198" alt="http 5" src="https://github.com/user-attachments/assets/9de19392-7b40-4b33-b43f-8b4b4c7d81a2" />
 
 ## Result
 Thus the socket for HTTP for web page upload and download created and Executed
