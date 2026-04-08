@@ -22,41 +22,54 @@ To write a PYTHON program for socket for HTTP for web page upload and download
 #### http.py
 ```.py
 import socket
-def send_request(host, port, request):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, port))
-        s.sendall(request.encode())
-        response = s.recv(4096).decode()
-    return response
 
-def upload_file(host, port, filename):
-    with open(filename, 'rb') as file:
-        file_data = file.read()
-        content_length = len(file_data)
-        request = f"POST /upload HTTP/1.1\r\nHost: {host}\r\nContent-Length: {content_length}\r\n\r\n"
-        request += file_data.decode()
-        response = send_request(host, port, request)
-    return response
+host = 'localhost'
+port = 8000 # Use a common web port like 8080
 
-def download_file(host, port, filename):
-    request = f"GET /{filename} HTTP/1.1\r\nHost: {host}\r\n\r\n"
-    response = send_request(host, port, request)
-    # Assuming the response contains the file content after the headers
-    file_content = response.split('\r\n\r\n', 1)[1]
-    with open(filename, 'wb') as file:
-        file.write(file_content.encode())
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((host, port))
+s.listen(5)
 
-if __name__ == "__main__":
-    host = 'example.com'
-    port = 80
+print(f"Server running at http://{host}:{port}/")
 
-    # Upload file
-    upload_response = upload_file(host, port, 'example.txt')
-    print("Upload response:", upload_response)
+while True:
+    conn, addr = s.accept()
+    print("Connected by", addr)
+    request = conn.recv(1024).decode()
+    print("Request received:\n", request)
 
-    # Download file
-    download_file(host, port, 'example.txt')
-    print("File downloaded successfully.")
+    try:
+        with open("index.html", "rb") as f:
+            response_body = f.read()
+        response_header = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            f"Content-Length: {len(response_body)}\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ).encode()
+        conn.sendall(response_header + response_body)
+    except FileNotFoundError:
+        response = "HTTP/1.1 404 Not Found\r\n\r\nFile not found".encode()
+        conn.sendall(response)
+
+    conn.close()
+```
+
+### index.html
+```.py
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Socket Server</title>
+</head>
+<body>
+    <h1>Hello from Python socket server</h1>
+    <p>This page is served by your Python socket server!</p>
+</body>
+</html>
 ```
 
 ## OUTPUT
